@@ -23,9 +23,12 @@ import reducers.*;
 
 public class Task2Driver extends Configured implements Tool{
 
-	private static final String INTERMEDIATE_OUTPUT1 = "/Users/chen/Desktop/task2_intermediate1";
-	private static final String INTERMEDIATE_OUTPUT2 = "/Users/chen/Desktop/task2_intermediate2";
+	private static final String INTERMEDIATE_OUTPUT1 = "./task2_intermediate1";
+	//private static final String INTERMEDIATE_OUTPUT2 = "./task2_intermediate2";
 	
+	private static final int NUMBER_OF_NODES = 14;
+	private static final int REDUCE_TASKS_MAXIMUM = 2;
+
 	public static void main(String[] args) throws Exception {
 			     int res = ToolRunner.run(new Configuration(), new Task2Driver(), args);
 			     System.exit(res);
@@ -54,16 +57,25 @@ public class Task2Driver extends Configured implements Tool{
 	    /**
 	     * set reducer number    a partitioner?
 	     */
-	    job1.setNumReduceTasks(3);
+	    job1.setNumReduceTasks((int) (1.75 * NUMBER_OF_NODES * REDUCE_TASKS_MAXIMUM));
 	    job1.setReducerClass(Job1Reducer.class);
 
 	    //set output format
 	    job1.setOutputKeyClass(Text.class);
 	    job1.setOutputValueClass(Text.class);
 
-	    //set input and output path
-	  //  FileInputFormat.addInputPath((JobConf)job.getConfiguration(), new Path(args[0]));
-	   MultipleInputs.addInputPath(job1, new Path(args[0]), TextInputFormat.class, Job1Mapper1.class);
+	 
+	    FileSystem fs= FileSystem.get(conf1); 
+
+		  FileStatus[] status_list = fs.listStatus(new Path(args[0]));
+		  if(status_list != null){
+		      for(FileStatus status : status_list){
+		      
+		    	  MultipleInputs.addInputPath(job1, new Path(status.getPath().toString()), TextInputFormat.class, Job1Mapper1.class);
+		      }
+		  }
+		      
+	  // MultipleInputs.addInputPath(job1, new Path(args[0]), TextInputFormat.class, Job1Mapper1.class);
 	   MultipleInputs.addInputPath(job1, new Path(args[1]), TextInputFormat.class, Job1Mapper2.class);
 
 	   FileOutputFormat.setOutputPath(job1, new Path(this.INTERMEDIATE_OUTPUT1));
