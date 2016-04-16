@@ -78,7 +78,7 @@ public class Job2Reducer
 					
 					
 					//assign neighbor to its relevant city
-					if(neighborTable.contains(city)){
+					if(neighborTable.containsKey(city)){
 						Entry<String, Integer> e = neighborTable.get(city);
 						if(e != null){
 							if(e.getKey().equals(neighbor)){
@@ -95,7 +95,7 @@ public class Job2Reducer
 				}
 				
 				//add user count to the same city
-				if(cityTable.contains(city)){
+				if(cityTable.containsKey(city)){
 					cityTable.put(city, cityTable.get(city) + userCount);
 				}else{
 					cityTable.put(city, userCount);

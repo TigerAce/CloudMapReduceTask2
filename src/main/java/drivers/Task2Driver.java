@@ -92,11 +92,14 @@ public class Task2Driver extends Configured implements Tool{
 
 	    //set mapper
 	    
+	    
 	    job2.setMapperClass(Job2Mapper1.class);
 
 	    //set combiner
 	  //  job.setCombinerClass(RecordReducer.class);
 
+	    job1.setNumReduceTasks((int) (1.75 * NUMBER_OF_NODES * REDUCE_TASKS_MAXIMUM));
+	    
 	    //set reducer
 	    job2.setReducerClass(Job2Reducer.class);
 
