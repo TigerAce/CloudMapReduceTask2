@@ -9,6 +9,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -22,8 +23,7 @@ public class Job2Reducer
 	private final int CITY_LIMIT = 10;
 	
 	private Hashtable<String, Integer> cityTable = new Hashtable<String, Integer>();
-	
-	private Hashtable<String, Entry<String, Integer>> neighborTable = new Hashtable<String, Entry<String, Integer>>();
+	private Hashtable<String, Hashtable<String, Integer>> neighborTable = new Hashtable<String, Hashtable<String, Integer>>();
 	
 	/**
 	 * Generic function to sort a map by its values
@@ -54,59 +54,44 @@ public class Job2Reducer
             Context context
             ) throws IOException, InterruptedException {
 
-
 		cityTable.clear();
 		neighborTable.clear();
 		
 		for(Text t : values){
-			String currVal = t.toString();
+			String[] splitVal = t.toString().split("/");
+			String city = splitVal[0];
+			String[] neighbors = splitVal[1].split(" ");
+			
+			
+			//add user count to the same city
 		
-			String[] splitVal = currVal.split("/");
-			
-			int userCount = Integer.parseInt(splitVal[0]);
-			
-			/**
-			 * 
-			 */
-			if(userCount != 0){
-				String[] splitLocality = splitVal[1].split(" ");
-				String city = splitLocality[0];
-				
-				String neighbor = null;
-				if(splitLocality.length > 1){
-					neighbor = splitLocality[1];
-					
-					
-					//assign neighbor to its relevant city
-					if(neighborTable.containsKey(city)){
-						Entry<String, Integer> e = neighborTable.get(city);
-						if(e != null){
-							if(e.getKey().equals(neighbor)){
-								e.setValue(e.getValue() + userCount);
-							}else{
-								if(e.getValue() < userCount){
-									neighborTable.put(city, new AbstractMap.SimpleEntry<String, Integer>(neighbor, userCount));
-								}
-							}
-						}
-					}else{
-						neighborTable.put(city, new AbstractMap.SimpleEntry<String, Integer>(neighbor, userCount));
-					}
-				}
-				
-				//add user count to the same city
-				if(cityTable.containsKey(city)){
-					cityTable.put(city, cityTable.get(city) + userCount);
-				}else{
-					cityTable.put(city, userCount);
-				}
-				
-				
+			if(cityTable.containsKey(city)){
+				cityTable.put(city, cityTable.get(city) + 1);
+			}else{
+				cityTable.put(city, 1);
 			}
 			
-		
+			//add neighbors
+			if(!neighbors[0].equals("NULL")){
+				for(int i = 0; i < neighbors.length; i++){
+					if(neighborTable.containsKey(city)){
+						Hashtable<String, Integer> nt = neighborTable.get(city);
+						if(nt.containsKey(neighbors[i])){
+							nt.put(neighbors[i],nt.get(neighbors[i]) + 1);
+						}else{
+							nt.put(neighbors[i], 1);
+						}
+						
+					}else{
+						Hashtable<String, Integer> nt = new Hashtable<String, Integer>();
+						nt.put(neighbors[i], 1);
+						neighborTable.put(city, nt);
+					}
+				}
+			}
+			
 		}
-		
+
 	
 		//countryName\t{(localityName:numOfUsers, neighborhoodName :numOfUsers)}+
 		
@@ -127,12 +112,19 @@ public class Job2Reducer
 				String o = null;
 				for(int i = 0; i < counter; i++){
 					Entry<String, Integer> currCity = sortedCity.get(i);
-					Entry<String, Integer> currNeighbor = neighborTable.get(currCity.getKey());
-			
-					String currRes;
-					if(currNeighbor != null){
-						currRes = "(" + currCity.getKey().replace("+", " ") + ":" + currCity.getValue() + ", "
-						+ currNeighbor.getKey() + ":" + currNeighbor.getValue() + ")";
+					Hashtable<String, Integer> neighbors = neighborTable.get(currCity.getKey());
+					
+					
+					String currRes = "";
+					
+					if(neighbors != null){
+						List<Entry<String, Integer>> sortedNeighbor = entriesSortedByValues(neighbors);
+						
+						if(sortedNeighbor.size() != 0){
+							Entry<String, Integer> currNeighbor = sortedNeighbor.get(0);
+							currRes = "(" + currCity.getKey().replace("+", " ") + ":" + currCity.getValue() + ", "
+									+ currNeighbor.getKey() + ":" + currNeighbor.getValue() + ")";
+						}
 					}else{
 						currRes = "(" + currCity.getKey().replace("+", " ") + ":" + currCity.getValue() + ")";
 					}
